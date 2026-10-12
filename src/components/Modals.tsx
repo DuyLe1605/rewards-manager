@@ -1,5 +1,22 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Sparkles, RotateCw, Check, Plus, Settings, Infinity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Sparkles,
+  RotateCw,
+  Plus,
+  Settings,
+  Infinity,
+  Users,
+  Laptop,
+  Activity,
+  KeyRound,
+  Clock,
+  User,
+  CreditCard,
+  X,
+  Check,
+  ShieldCheck,
+  ChevronDown
+} from 'lucide-react';
 import type { License } from '../types/license';
 
 export function generateRandomKeyCode(): string {
@@ -13,46 +30,100 @@ export function generateRandomKeyCode(): string {
 
 const UNLIMITED = 999999;
 
-interface UnlimitedInputProps {
+interface LimitRowProps {
+  icon: React.ReactNode;
   label: string;
+  sublabel: string;
   value: number;
+  unit: string;
   onChange: (v: number) => void;
   min?: number;
   defaultValue?: number;
 }
 
-const UnlimitedInput: React.FC<UnlimitedInputProps> = ({ label, value, onChange, min = 1, defaultValue = 10 }) => {
+const LimitRow: React.FC<LimitRowProps> = ({
+  icon,
+  label,
+  sublabel,
+  value,
+  unit,
+  onChange,
+  min = 1,
+  defaultValue = 10,
+}) => {
   const isUnlimited = value >= UNLIMITED;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-semibold text-slate-300">{label}</label>
-        <label className="flex items-center gap-1.5 cursor-pointer">
+    <div
+      className={`p-3 rounded-xl border transition-all ${
+        isUnlimited
+          ? 'bg-emerald-950/25 border-emerald-500/40 shadow-sm shadow-emerald-500/5'
+          : 'bg-slate-950/70 border-slate-800/90 hover:border-slate-700/80'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        {/* Left: Icon & Title */}
+        <div className="flex items-center gap-3 min-w-0">
           <div
-            className={`relative w-8 h-4 rounded-full transition-colors cursor-pointer ${isUnlimited ? 'bg-emerald-500' : 'bg-slate-700'}`}
-            onClick={() => onChange(isUnlimited ? defaultValue : UNLIMITED)}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+              isUnlimited
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 border border-slate-700/50'
+            }`}
           >
-            <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${isUnlimited ? 'translate-x-4' : 'translate-x-0'}`} />
+            {icon}
           </div>
-          <span className={`text-[11px] font-medium flex items-center gap-0.5 select-none ${isUnlimited ? 'text-emerald-400' : 'text-slate-500'}`}>
-            <Infinity className="w-3 h-3" /> Kh&#244;ng gi&#7899;i h&#7841;n
-          </span>
-        </label>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+              <span>{label}</span>
+              {isUnlimited && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                  VÔ HẠN
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-400 truncate">{sublabel}</div>
+          </div>
+        </div>
+
+        {/* Right: Input & Unlimited Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative">
+            {isUnlimited ? (
+              <div className="w-24 px-2.5 py-1.5 text-xs font-bold text-center text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg select-none flex items-center justify-center gap-1">
+                <Infinity className="w-3.5 h-3.5" /> Vô hạn
+              </div>
+            ) : (
+              <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+                <input
+                  type="number"
+                  min={min}
+                  value={value}
+                  onChange={(e) => onChange(parseInt(e.target.value, 10) || min)}
+                  className="w-16 px-2.5 py-1.5 text-xs text-center font-bold text-white bg-transparent focus:outline-none"
+                />
+                <span className="pr-2 text-[10px] text-slate-400 font-medium select-none">
+                  {unit}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onChange(isUnlimited ? defaultValue : UNLIMITED)}
+            className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer border ${
+              isUnlimited
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-sm shadow-emerald-500/30 font-bold hover:bg-emerald-400'
+                : 'bg-slate-800/80 text-slate-400 border-slate-700/80 hover:text-white hover:bg-slate-700'
+            }`}
+            title={isUnlimited ? 'Nhấn để đặt lại giới hạn số lượng' : 'Nhấn để cấp quyền không giới hạn'}
+          >
+            <Infinity className="w-3.5 h-3.5" />
+            <span>{isUnlimited ? 'Đang vô hạn' : 'Vô hạn'}</span>
+          </button>
+        </div>
       </div>
-      <input
-        type="number"
-        min={min}
-        value={isUnlimited ? '' : value}
-        disabled={isUnlimited}
-        placeholder={isUnlimited ? '\u221e  Kh\u00f4ng gi\u1edbi h\u1ea1n' : ''}
-        onChange={(e) => onChange(parseInt(e.target.value, 10) || min)}
-        className={`w-full px-3 py-2 text-xs rounded-lg border text-white focus:outline-none transition-colors ${
-          isUnlimited
-            ? 'bg-slate-950/50 border-emerald-500/30 text-emerald-400 placeholder-emerald-500/60 cursor-not-allowed'
-            : 'bg-slate-950 border-slate-800 focus:border-emerald-500'
-        }`}
-      />
     </div>
   );
 };
@@ -95,14 +166,28 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400" /> T&#7841;o B&#7843;n Quy&#7873;n M&#7899;i
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">&#x2715;</button>
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800/90 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl shadow-emerald-950/30 my-8 animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900 to-slate-850">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white leading-tight">Tạo Bản Quyền Mới</h3>
+              <p className="text-[11px] text-slate-400">Cấp mã kích hoạt và cấu hình hạn mức cho khách hàng</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
+
+        {/* Form Body */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -116,83 +201,151 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
               max_activations: maxActivations,
             });
           }}
-          className="p-6 space-y-4"
+          className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
         >
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">T&#234;n Kh&#225;ch h&#224;ng / Nick Zalo / Telegram:</label>
-              <input
-                type="text"
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="VD: A. Tu&#7845;n Zalo"
-                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Ghi ch&#250; (Gi&#225; ti&#7873;n / K&#234;nh b&#225;n):</label>
-              <input
-                type="text"
-                value={customerNote}
-                onChange={(e) => setCustomerNote(e.target.value)}
-                placeholder="VD: 200k - Chuy&#7875;n kho&#7843;n VietQR"
-                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
+          {/* Thông tin khách hàng */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <UnlimitedInput label="S&#7889; Profile t&#7889;i &#273;a:" value={maxProfiles} onChange={setMaxProfiles} min={1} defaultValue={5} />
-            </div>
-            <div>
-              <UnlimitedInput label="S&#7889; thi&#7871;t b&#7883; (Redeem Limit):" value={maxActivations} onChange={setMaxActivations} min={1} defaultValue={1} />
-            </div>
-            <div className="col-span-2">
-              <UnlimitedInput label="T&#7893;ng s&#7889; l&#432;&#7907;t Runs:" value={totalRuns} onChange={setTotalRuns} min={1} defaultValue={150} />
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Th&#7901;i h&#7841;n (t&#237;nh t&#7915; ng&#224;y k&#237;ch ho&#7841;t):</label>
-              <select
-                value={durationDays}
-                onChange={(e) => setDurationDays(parseInt(e.target.value, 10))}
-                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-              >
-                <option value={7}>7 Ng&#224;y (D&#249;ng th&#7917; / G&#243;i tu&#7847;n)</option>
-                <option value={14}>14 Ng&#224;y (2 Tu&#7847;n)</option>
-                <option value={30}>30 Ng&#224;y (1 Th&#225;ng)</option>
-                <option value={60}>60 Ng&#224;y (2 Th&#225;ng)</option>
-                <option value={90}>90 Ng&#224;y (3 Th&#225;ng)</option>
-                <option value={365}>365 Ng&#224;y (1 N&#259;m)</option>
-                <option value={3650}>V&#297;nh vi&#7877;n (10 N&#259;m)</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-300">M&#227; Key Code:</label>
-                <button
-                  type="button"
-                  onClick={() => setKeyCode(generateRandomKeyCode())}
-                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <RotateCw className="w-3 h-3" /> &#272;&#7893;i m&#227; ng&#7851;u nhi&#234;n
-                </button>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Tên Khách hàng / Nick <span className="text-emerald-400">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="VD: A. Tuấn Zalo"
+                  className="w-full pl-8.5 pr-3 py-2 text-xs rounded-xl bg-slate-950/80 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
               </div>
-              <input
-                type="text"
-                required
-                value={keyCode}
-                onChange={(e) => setKeyCode(e.target.value.toUpperCase())}
-                className="w-full font-mono uppercase px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Ghi chú / Kênh bán
+              </label>
+              <div className="relative">
+                <CreditCard className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={customerNote}
+                  onChange={(e) => setCustomerNote(e.target.value)}
+                  placeholder="VD: 200k - VietQR"
+                  className="w-full pl-8.5 pr-3 py-2 text-xs rounded-xl bg-slate-950/80 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Cấu hình hạn mức (Quotas) */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Cấu hình giới hạn sử dụng
+              </span>
+              <span className="text-[10px] text-slate-400">Nhập số hoặc chọn Vô hạn</span>
+            </div>
+
+            <div className="space-y-2">
+              <LimitRow
+                icon={<Users className="w-4 h-4" />}
+                label="Số Profile tối đa"
+                sublabel="Số lượng Profile tool được phép quản lý và chạy"
+                value={maxProfiles}
+                unit="profile"
+                onChange={setMaxProfiles}
+                min={1}
+                defaultValue={5}
+              />
+
+              <LimitRow
+                icon={<Laptop className="w-4 h-4" />}
+                label="Số thiết bị kích hoạt"
+                sublabel="Redeem Limit - Số máy tính tối đa được kích hoạt key"
+                value={maxActivations}
+                unit="máy"
+                onChange={setMaxActivations}
+                min={1}
+                defaultValue={1}
+              />
+
+              <LimitRow
+                icon={<Activity className="w-4 h-4" />}
+                label="Tổng số lượt chạy (Runs)"
+                sublabel="Số lượt bấm chạy tool (khấu trừ mỗi lần thực thi)"
+                value={totalRuns}
+                unit="runs"
+                onChange={setTotalRuns}
+                min={1}
+                defaultValue={150}
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">
-              H&#7911;y
+
+          {/* Thời hạn bản quyền */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Thời hạn hiệu lực (tính từ ngày kích hoạt)
+            </label>
+            <div className="relative">
+              <Clock className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+              <select
+                value={durationDays}
+                onChange={(e) => setDurationDays(parseInt(e.target.value, 10))}
+                className="w-full pl-8.5 pr-8 py-2 text-xs rounded-xl bg-slate-950/80 border border-slate-800 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer appearance-none transition-all"
+              >
+                <option value={7}>7 Ngày (Dùng thử / Gói tuần)</option>
+                <option value={14}>14 Ngày (2 Tuần)</option>
+                <option value={30}>30 Ngày (1 Tháng - Mặc định)</option>
+                <option value={60}>60 Ngày (2 Tháng)</option>
+                <option value={90}>90 Ngày (3 Tháng / Gói Quý)</option>
+                <option value={180}>180 Ngày (6 Tháng / Nửa Năm)</option>
+                <option value={365}>365 Ngày (1 Năm)</option>
+                <option value={3650}>Vĩnh viễn (Trọn đời 10 Năm)</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Mã Key Code Box */}
+          <div className="p-3.5 rounded-xl bg-slate-950/90 border border-emerald-500/25 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5" /> Mã Bản Quyền (License Key)
+              </label>
+              <button
+                type="button"
+                onClick={() => setKeyCode(generateRandomKeyCode())}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <RotateCw className="w-3 h-3" /> Đổi mã ngẫu nhiên
+              </button>
+            </div>
+            <input
+              type="text"
+              required
+              value={keyCode}
+              onChange={(e) => setKeyCode(e.target.value.toUpperCase())}
+              className="w-full font-mono uppercase px-3 py-2 text-sm rounded-lg bg-slate-900 border border-emerald-500/40 text-emerald-400 font-bold tracking-wider focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/50 selection:bg-emerald-500 selection:text-slate-950"
+            />
+          </div>
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-800 bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+            >
+              Hủy bỏ
             </button>
-            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold flex items-center gap-1.5 cursor-pointer">
-              <Check className="w-3.5 h-3.5" /> T&#7841;o Key Ngay
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all cursor-pointer"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Tạo Key Ngay
             </button>
           </div>
         </form>
@@ -214,13 +367,18 @@ export const ExtendModal: React.FC<ExtendModalProps> = ({ license, onClose, onSu
   if (!license) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl shadow-emerald-950/30 animate-in fade-in zoom-in-95 duration-150">
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Plus className="w-4 h-4 text-emerald-400" /> Gia H&#7841;n &amp; C&#7897;ng Th&#234;m Runs
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Plus className="w-4 h-4" />
+            </div>
+            Gia Hạn &amp; Thêm Lượt Chạy
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">&#x2715;</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
         </div>
         <form
           onSubmit={(e) => {
@@ -230,18 +388,41 @@ export const ExtendModal: React.FC<ExtendModalProps> = ({ license, onClose, onSu
           className="p-6 space-y-4"
         >
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">C&#7897;ng th&#234;m l&#432;&#7907;t Runs:</label>
-            <input type="number" min={0} value={extraRuns} onChange={(e) => setExtraRuns(parseInt(e.target.value, 10) || 0)} className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500" />
-            <p className="text-[11px] text-slate-500 mt-1">* Nh&#7853;p 0 n&#7871;u kh&#244;ng mu&#7889;n c&#7897;ng th&#234;m runs.</p>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm lượt Runs:</label>
+            <input
+              type="number"
+              min={0}
+              value={extraRuns}
+              onChange={(e) => setExtraRuns(parseInt(e.target.value, 10) || 0)}
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">* Nhập 0 nếu không muốn cộng thêm runs.</p>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">C&#7897;ng th&#234;m s&#7889; ng&#224;y h&#7871;t h&#7841;n:</label>
-            <input type="number" min={0} value={extraDays} onChange={(e) => setExtraDays(parseInt(e.target.value, 10) || 0)} className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500" />
-            <p className="text-[11px] text-slate-500 mt-1">* S&#7889; gia h&#7841;n c&#7897;ng d&#7891;n v&#224;o ng&#224;y h&#7871;t h&#7841;n hi&#7879;n t&#7841;i.</p>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm số ngày hết hạn:</label>
+            <input
+              type="number"
+              min={0}
+              value={extraDays}
+              onChange={(e) => setExtraDays(parseInt(e.target.value, 10) || 0)}
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">* Số ngày sẽ được cộng dồn vào hạn dùng hiện tại.</p>
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">H&#7911;y</button>
-            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer">L&#432;u C&#7853;p Nh&#7853;t</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs rounded-xl border border-slate-800 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-xs rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer"
+            >
+              Lưu Cập Nhật
+            </button>
           </div>
         </form>
       </div>
@@ -269,29 +450,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, initialUrl, 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl shadow-emerald-950/30 animate-in fade-in zoom-in-95 duration-150">
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Settings className="w-4 h-4 text-emerald-400" /> C&#224;i &#272;&#7863;t K&#7871;t N&#7889;i Supabase
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Settings className="w-4 h-4" />
+            </div>
+            Cài Đặt Kết Nối Supabase
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">&#x2715;</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave(url, key); }} className="p-6 space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave(url, key);
+          }}
+          className="p-6 space-y-4"
+        >
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">Supabase Project URL:</label>
-            <input type="text" required value={url} onChange={(e) => setUrl(e.target.value)} className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500" />
+            <input
+              type="text"
+              required
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Supabase Secret Key / Service Key:</label>
-            <input type="password" required value={key} onChange={(e) => setKey(e.target.value)} placeholder="sb_secret_... ho&#7863;c service_role key" className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500" />
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Supabase Secret Key / Service Key:
+            </label>
+            <input
+              type="password"
+              required
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="sb_secret_... hoặc service_role key"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
+            />
             <p className="text-[11px] text-slate-400 mt-1.5">
-              * L&#7845;y trong Supabase: <strong>Project Settings &rarr; API Keys &rarr; Secret keys</strong> (b&#7855;t &#273;&#7847;u b&#7857;ng <code>sb_secret_...</code>).
+              * Lấy trong Supabase: <strong>Project Settings &rarr; API Keys &rarr; Secret keys</strong> (bắt đầu bằng <code>sb_secret_...</code>).
             </p>
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">&#272;&#243;ng</button>
-            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer">L&#432;u C&#224;i &#272;&#7863;t</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs rounded-xl border border-slate-800 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-xs rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer"
+            >
+              Lưu Cài Đặt
+            </button>
           </div>
         </form>
       </div>
