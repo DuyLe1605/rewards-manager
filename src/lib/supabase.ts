@@ -1,10 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-export const DEFAULT_SUPABASE_URL = "https://kcbhuprbaenskzrfdpzx.supabase.co";
+export const DEFAULT_SUPABASE_URL = 'https://kcbhuprbaenskzrfdpzx.supabase.co';
 
 export function getStoredConfig() {
-  const url = localStorage.getItem('rewards_admin_url') || DEFAULT_SUPABASE_URL;
-  const key = localStorage.getItem('rewards_admin_key') || '';
+  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+  const envKey = (import.meta as any).env?.VITE_SUPABASE_SECRET_KEY;
+
+  const url = localStorage.getItem('rewards_admin_url') || envUrl || DEFAULT_SUPABASE_URL;
+  const key = localStorage.getItem('rewards_admin_key') || envKey || '';
   return { url, key };
 }
 
