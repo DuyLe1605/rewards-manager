@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Sparkles, RotateCw, Check, Plus, Settings } from 'lucide-react';
 import type { License } from '../types/license';
 
@@ -99,7 +99,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
               <input
                 type="number"
                 min={1}
-                max={100}
                 value={maxProfiles}
                 onChange={(e) => setMaxProfiles(parseInt(e.target.value, 10) || 1)}
                 className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
@@ -110,7 +109,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
               <input
                 type="number"
                 min={1}
-                max={50}
                 value={maxActivations}
                 onChange={(e) => setMaxActivations(parseInt(e.target.value, 10) || 1)}
                 className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
@@ -312,3 +310,5 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, initialUrl, 
     </div>
   );
 };
+
+
