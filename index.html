@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rewards Tool - Quản lý Bản quyền Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-2">
+                    Rewards Tool <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Admin Panel</span>
+                </h1>
+                <p class="text-xs text-slate-400">Hệ thống tạo & quản lý bản quyền khách hàng</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="openSettingsModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
+                <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span id="authStatusText">Cài đặt API Key</span>
+            </button>
+            <button onclick="loadLicenses()" class="p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer" title="Tải lại danh sách">
+                <i data-lucide="refresh-cw" class="w-4 h-4" id="refreshIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Tổng số Keys</p>
+                    <p class="text-2xl font-bold text-white mt-1" id="statTotalKeys">0</p>
+                </div>
+                <div class="p-3 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <i data-lucide="key-round" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Đang hoạt động</p>
+                    <p class="text-2xl font-bold text-emerald-400 mt-1" id="statActiveKeys">0</p>
+                </div>
+                <div class="p-3 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Đã gắn máy (HWID)</p>
+                    <p class="text-2xl font-bold text-purple-400 mt-1" id="statBoundKeys">0</p>
+                </div>
+                <div class="p-3 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <i data-lucide="laptop" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Tổng lượt chạy đã dùng</p>
+                    <p class="text-2xl font-bold text-amber-400 mt-1" id="statTotalRuns">0</p>
+                </div>
+                <div class="p-3 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar & Filter -->
+        <div class="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-3 w-full sm:w-auto flex-1 max-w-md">
+                <div class="relative w-full">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="searchInput" placeholder="Tìm theo tên khách, mã key, HWID..." 
+                        oninput="filterLicenses()"
+                        class="w-full pl-9 pr-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
+                </div>
+
+                <select id="statusFilter" onchange="filterLicenses()" class="px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="active">Đang hoạt động</option>
+                    <option value="expired">Hết hạn</option>
+                    <option value="blocked">Đã bị khóa</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button onclick="openCreateModal()" class="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    Tạo Key Mới
+                </button>
+            </div>
+        </div>
+
+        <!-- Licenses Table -->
+        <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40 shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300 border-collapse">
+                    <thead class="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold uppercase text-[11px] tracking-wider">
+                        <tr>
+                            <th class="py-3.5 px-4">Mã Key</th>
+                            <th class="py-3.5 px-4">Khách hàng & Ghi chú</th>
+                            <th class="py-3.5 px-4">Giới hạn & Tiến độ Runs</th>
+                            <th class="py-3.5 px-4">Hạn sử dụng</th>
+                            <th class="py-3.5 px-4">Máy tính (HWID)</th>
+                            <th class="py-3.5 px-4">Trạng thái</th>
+                            <th class="py-3.5 px-4 text-right">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="licenseTableBody" class="divide-y divide-slate-800/60">
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-slate-500">
+                                Đang tải danh sách...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Tạo Key mới -->
+    <div id="createModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i> Tạo Bản Quyền Mới
+                </h3>
+                <button onclick="closeModal('createModal')" class="text-slate-400 hover:text-white cursor-pointer">✕</button>
+            </div>
+            <form onsubmit="handleCreateLicense(event)" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Tên Khách hàng / Nick Zalo / Telegram:</label>
+                        <input type="text" id="newCustomerName" required placeholder="VD: A. Tuấn Zalo" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Ghi chú (Giá tiền / Kênh bán):</label>
+                        <input type="text" id="newCustomerNote" placeholder="VD: 200k - Chuyển khoản VietQR" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Số Profile tối đa:</label>
+                        <input type="number" id="newMaxProfiles" value="5" min="1" max="100" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Tổng số lượt Runs:</label>
+                        <input type="number" id="newTotalRuns" value="150" min="1" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Thời hạn sử dụng (tính từ ngày kích hoạt):</label>
+                        <select id="newDurationDays" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500 cursor-pointer">
+                            <option value="7">7 Ngày (Dùng thử / Gói tuần)</option>
+                            <option value="14">14 Ngày (2 Tuần)</option>
+                            <option value="30" selected>30 Ngày (1 Tháng)</option>
+                            <option value="60">60 Ngày (2 Tháng)</option>
+                            <option value="90">90 Ngày (3 Tháng)</option>
+                            <option value="365">365 Ngày (1 Năm)</option>
+                            <option value="3650">Vĩnh viễn (10 Năm)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-span-2">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs font-semibold text-slate-300">Mã Key Code:</label>
+                            <button type="button" onclick="generateRandomKeyCode()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer">
+                                <i data-lucide="rotate-cw" class="w-3 h-3"></i> Đổi mã ngẫu nhiên
+                            </button>
+                        </div>
+                        <input type="text" id="newKeyCode" required class="w-full font-mono uppercase px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-emerald-400 font-bold focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('createModal')" class="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Hủy</button>
+                    <button type="submit" class="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i> Tạo Key Ngay
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Gia hạn / Cộng runs -->
+    <div id="extendModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4 text-emerald-400"></i> Gia Hạn & Cộng Thêm Runs
+                </h3>
+                <button onclick="closeModal('extendModal')" class="text-slate-400 hover:text-white cursor-pointer">✕</button>
+            </div>
+            <form onsubmit="handleExtendLicense(event)" class="p-6 space-y-4">
+                <input type="hidden" id="extendLicId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm lượt Runs:</label>
+                    <input type="number" id="extendExtraRuns" value="50" min="0" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    <p class="text-[11px] text-slate-500 mt-1">* Nhập 0 nếu không muốn cộng thêm runs.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm số ngày hết hạn:</label>
+                    <input type="number" id="extendExtraDays" value="30" min="0" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500">
+                    <p class="text-[11px] text-slate-500 mt-1">* Sẽ gia hạn cộng dồn vào ngày hết hạn hiện tại.</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('extendModal')" class="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Hủy</button>
+                    <button type="submit" class="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer">Lưu Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Cài đặt API Supabase -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4 text-emerald-400"></i> Cài Đặt Kết Nối Supabase
+                </h3>
+                <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-white cursor-pointer">✕</button>
+            </div>
+            <form onsubmit="handleSaveSettings(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Supabase Project URL:</label>
+                    <input type="text" id="cfgUrl" required class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Supabase Secret Key / Service Role Key:</label>
+                    <input type="password" id="cfgSecretKey" required placeholder="sb_secret_... hoặc service_role key" class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500">
+                    <p class="text-[11px] text-slate-400 mt-1.5">
+                        * Lấy trong Supabase: <strong>Project Settings -&gt; API Keys -&gt; Secret keys</strong> (bắt đầu bằng <code>sb_secret_...</code>). Key này cho phép Admin tạo/sửa/xóa mọi key.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('settingsModal')" class="px-4 py-2 text-xs rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Đóng</button>
+                    <button type="submit" class="px-4 py-2 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer">Lưu Cài Đặt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-medium"></div>
+
+    <script>
+        const DEFAULT_URL = "https://kcbhuprbaenskzrfdpzx.supabase.co";
+        let supabaseClient = null;
+        let allLicenses = [];
+
+        function getStoredConfig() {
+            const url = localStorage.getItem('rewards_admin_url') || DEFAULT_URL;
+            const key = localStorage.getItem('rewards_admin_key') || '';
+            return { url, key };
+        }
+
+        function initSupabase() {
+            const { url, key } = getStoredConfig();
+            document.getElementById('cfgUrl').value = url;
+            document.getElementById('cfgSecretKey').value = key;
+
+            if (url && key) {
+                supabaseClient = supabase.createClient(url, key);
+                document.getElementById('authStatusText').innerText = 'Đã kết nối API';
+                document.getElementById('authStatusText').className = 'text-emerald-400';
+                return true;
+            } else {
+                document.getElementById('authStatusText').innerText = 'Chưa nhập Secret Key';
+                document.getElementById('authStatusText').className = 'text-amber-400';
+                openSettingsModal();
+                return false;
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = 'fixed bottom-5 right-5 z-50 transform transition-all duration-300 opacity-100 translate-y-0 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-medium ' +
+                (type === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+            setTimeout(() => {
+                toast.className = 'fixed bottom-5 right-5 z-50 transform transition-all duration-300 opacity-0 translate-y-20 pointer-events-none px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-medium';
+            }, 3000);
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function openSettingsModal() {
+            openModal('settingsModal');
+        }
+
+        function openCreateModal() {
+            generateRandomKeyCode();
+            openModal('createModal');
+        }
+
+        function generateRandomKeyCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let part1 = '';
+            let part2 = '';
+            for (let i = 0; i < 4; i++) part1 += chars.charAt(Math.floor(Math.random() * chars.length));
+            for (let i = 0; i < 4; i++) part2 += chars.charAt(Math.floor(Math.random() * chars.length));
+            document.getElementById('newKeyCode').value = 'REW-VIP-' + part1 + '-' + part2;
+        }
+
+        function handleSaveSettings(e) {
+            e.preventDefault();
+            const url = document.getElementById('cfgUrl').value.trim();
+            const key = document.getElementById('cfgSecretKey').value.trim();
+            localStorage.setItem('rewards_admin_url', url);
+            localStorage.setItem('rewards_admin_key', key);
+            closeModal('settingsModal');
+            showToast('Đã lưu cấu hình kết nối');
+            initSupabase();
+            loadLicenses();
+        }
+
+        async function loadLicenses() {
+            if (!supabaseClient) {
+                if (!initSupabase()) return;
+            }
+
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('licenses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                allLicenses = data || [];
+                renderLicenses(allLicenses);
+                updateStats(allLicenses);
+            } catch (err) {
+                console.error(err);
+                showToast('Lỗi tải: ' + (err.message || 'Kiểm tra Secret Key'), 'error');
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        function updateStats(licenses) {
+            const total = licenses.length;
+            const now = new Date();
+            let active = 0;
+            let bound = 0;
+            let runs = 0;
+
+            licenses.forEach(l => {
+                const isExpired = l.expires_at && new Date(l.expires_at) < now;
+                const isOutOfRuns = l.used_runs >= l.total_runs;
+                if (l.status === 'active' && !isExpired && !isOutOfRuns) active++;
+                if (l.machine_id) bound++;
+                runs += (l.used_runs || 0);
+            });
+
+            document.getElementById('statTotalKeys').innerText = total;
+            document.getElementById('statActiveKeys').innerText = active;
+            document.getElementById('statBoundKeys').innerText = bound;
+            document.getElementById('statTotalRuns').innerText = runs.toLocaleString('vi-VN');
+        }
+
+        function filterLicenses() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const status = document.getElementById('statusFilter').value;
+            const now = new Date();
+
+            const filtered = allLicenses.filter(l => {
+                const matchQuery = !query || 
+                    (l.key_code && l.key_code.toLowerCase().includes(query)) ||
+                    (l.customer_name && l.customer_name.toLowerCase().includes(query)) ||
+                    (l.machine_id && l.machine_id.toLowerCase().includes(query)) ||
+                    (l.customer_note && l.customer_note.toLowerCase().includes(query));
+
+                if (!matchQuery) return false;
+
+                const isExpired = l.expires_at && new Date(l.expires_at) < now;
+                if (status === 'active') return l.status === 'active' && !isExpired && l.used_runs < l.total_runs;
+                if (status === 'expired') return isExpired || l.used_runs >= l.total_runs;
+                if (status === 'blocked') return l.status === 'blocked';
+
+                return true;
+            });
+
+            renderLicenses(filtered);
+        }
+
+        function renderLicenses(licenses) {
+            const tbody = document.getElementById('licenseTableBody');
+            if (licenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500">Không tìm thấy mã key nào</td></tr>';
+                return;
+            }
+
+            const now = new Date();
+
+            tbody.innerHTML = licenses.map(l => {
+                const isExpired = l.expires_at && new Date(l.expires_at) < now;
+                const isOutOfRuns = l.used_runs >= l.total_runs;
+                const usagePercent = l.total_runs > 0 ? Math.min(100, Math.round((l.used_runs / l.total_runs) * 100)) : 0;
+
+                let statusBadge = '';
+                if (l.status === 'blocked') {
+                    statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">ĐÃ KHÓA</span>';
+                } else if (isExpired) {
+                    statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">HẾT HẠN</span>';
+                } else if (isOutOfRuns) {
+                    statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">HẾT RUNS</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">HOẠT ĐỘNG</span>';
+                }
+
+                const expireDateStr = l.expires_at 
+                    ? new Date(l.expires_at).toLocaleDateString('vi-VN') 
+                    : ('Chưa kích hoạt (' + l.duration_days + ' ngày)');
+
+                const machineDisplay = l.machine_id 
+                    ? '<span class="font-mono text-purple-400 text-[11px] bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">' + l.machine_id.substring(0, 10) + '...</span>' 
+                    : '<span class="text-slate-500 italic text-[11px]">Chưa gắn máy</span>';
+
+                return '<tr class="hover:bg-slate-800/30 transition-colors">' +
+                    '<td class="py-3.5 px-4 font-mono font-bold text-white whitespace-nowrap">' +
+                        '<div class="flex items-center gap-1.5">' +
+                            '<span>' + l.key_code + '</span>' +
+                            '<button onclick="copyText(\'' + l.key_code + '\')" class="text-slate-400 hover:text-emerald-400 p-1 cursor-pointer" title="Sao chép">' +
+                                '<i data-lucide="copy" class="w-3.5 h-3.5"></i>' +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="py-3.5 px-4">' +
+                        '<div class="font-medium text-white">' + (l.customer_name || 'Khách vãng lai') + '</div>' +
+                        '<div class="text-[11px] text-slate-400">' + (l.customer_note || '-') + '</div>' +
+                    '</td>' +
+                    '<td class="py-3.5 px-4">' +
+                        '<div class="flex items-center justify-between text-[11px] mb-1">' +
+                            '<span class="text-slate-400">Max: <strong class="text-white">' + l.max_profiles + ' nick</strong></span>' +
+                            '<span class="text-slate-300 font-mono">' + l.used_runs + ' / ' + l.total_runs + ' runs</span>' +
+                        '</div>' +
+                        '<div class="w-32 h-1.5 rounded-full bg-slate-800 overflow-hidden">' +
+                            '<div class="h-full ' + (usagePercent >= 90 ? 'bg-red-500' : 'bg-emerald-500') + '" style="width: ' + usagePercent + '%"></div>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="py-3.5 px-4 whitespace-nowrap">' +
+                        '<div class="text-slate-300">' + expireDateStr + '</div>' +
+                        '<div class="text-[10px] text-slate-500">' + (l.activated_at ? 'Kích hoạt: ' + new Date(l.activated_at).toLocaleDateString('vi-VN') : 'Chưa nhập máy') + '</div>' +
+                    '</td>' +
+                    '<td class="py-3.5 px-4 max-w-[140px] truncate" title="' + (l.machine_id || 'Chưa gắn') + '">' +
+                        machineDisplay +
+                    '</td>' +
+                    '<td class="py-3.5 px-4 whitespace-nowrap">' +
+                        statusBadge +
+                    '</td>' +
+                    '<td class="py-3.5 px-4 text-right whitespace-nowrap">' +
+                        '<div class="flex items-center justify-end gap-1.5">' +
+                            '<button onclick="resetHwid(\'' + l.key_code + '\')" class="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-purple-400 transition-colors cursor-pointer" title="Reset máy (cho khách đổi máy)">' +
+                                '<i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>' +
+                            '</button>' +
+                            '<button onclick="openExtendModal(\'' + l.id + '\')" class="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer" title="Cộng lượt / Gia hạn">' +
+                                '<i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>' +
+                            '</button>' +
+                            '<button onclick="toggleBlock(\'' + l.id + '\', \'' + l.status + '\')" class="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 transition-colors cursor-pointer" title="' + (l.status === 'blocked' ? 'Mở khóa' : 'Khóa key') + '">' +
+                                '<i data-lucide="' + (l.status === 'blocked' ? 'unlock' : 'lock') + '" class="w-3.5 h-3.5"></i>' +
+                            '</button>' +
+                            '<button onclick="deleteLicense(\'' + l.id + '\', \'' + l.key_code + '\')" class="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-red-400 transition-colors cursor-pointer" title="Xóa key">' +
+                                '<i data-lucide="trash-2" class="w-3.5 h-3.5"></i>' +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        async function handleCreateLicense(e) {
+            e.preventDefault();
+            const key_code = document.getElementById('newKeyCode').value.trim();
+            const customer_name = document.getElementById('newCustomerName').value.trim();
+            const customer_note = document.getElementById('newCustomerNote').value.trim();
+            const max_profiles = parseInt(document.getElementById('newMaxProfiles').value, 10) || 5;
+            const total_runs = parseInt(document.getElementById('newTotalRuns').value, 10) || 150;
+            const duration_days = parseInt(document.getElementById('newDurationDays').value, 10) || 30;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('licenses')
+                    .insert([{
+                        key_code,
+                        customer_name,
+                        customer_note,
+                        max_profiles,
+                        total_runs,
+                        duration_days,
+                        used_runs: 0,
+                        status: 'active'
+                    }]);
+
+                if (error) throw error;
+                closeModal('createModal');
+                showToast('Đã tạo key thành công: ' + key_code);
+                copyText(key_code);
+                loadLicenses();
+            } catch (err) {
+                console.error(err);
+                showToast('Lỗi tạo key: ' + err.message, 'error');
+            }
+        }
+
+        async function resetHwid(keyCode) {
+            if (!confirm('Bạn có chắc muốn reset máy cho key ' + keyCode + '?\nKhách có thể kích hoạt trên máy mới.')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('licenses')
+                    .update({ machine_id: null, updated_at: new Date().toISOString() })
+                    .eq('key_code', keyCode);
+
+                if (error) throw error;
+                showToast('Đã reset máy thành công');
+                loadLicenses();
+            } catch (err) {
+                showToast('Lỗi reset: ' + err.message, 'error');
+            }
+        }
+
+        async function toggleBlock(id, currentStatus) {
+            const newStatus = currentStatus === 'blocked' ? 'active' : 'blocked';
+            try {
+                const { error } = await supabaseClient
+                    .from('licenses')
+                    .update({ status: newStatus, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+
+                if (error) throw error;
+                showToast(newStatus === 'blocked' ? 'Đã khóa key' : 'Đã mở khóa key');
+                loadLicenses();
+            } catch (err) {
+                showToast('Lỗi: ' + err.message, 'error');
+            }
+        }
+
+        function openExtendModal(id) {
+            document.getElementById('extendLicId').value = id;
+            openModal('extendModal');
+        }
+
+        async function handleExtendLicense(e) {
+            e.preventDefault();
+            const id = document.getElementById('extendLicId').value;
+            const extraRuns = parseInt(document.getElementById('extendExtraRuns').value, 10) || 0;
+            const extraDays = parseInt(document.getElementById('extendExtraDays').value, 10) || 0;
+
+            const lic = allLicenses.find(l => l.id === id);
+            if (!lic) return;
+
+            const newTotalRuns = (lic.total_runs || 0) + extraRuns;
+            let newExpiresAt = lic.expires_at ? new Date(lic.expires_at) : new Date();
+            if (newExpiresAt < new Date()) newExpiresAt = new Date();
+            newExpiresAt.setDate(newExpiresAt.getDate() + extraDays);
+
+            try {
+                const { error } = await supabaseClient
+                    .from('licenses')
+                    .update({
+                        total_runs: newTotalRuns,
+                        expires_at: extraDays > 0 ? newExpiresAt.toISOString() : lic.expires_at,
+                        status: 'active',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+                closeModal('extendModal');
+                showToast('Đã cập nhật gia hạn thành công');
+                loadLicenses();
+            } catch (err) {
+                showToast('Lỗi: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteLicense(id, keyCode) {
+            if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn key ' + keyCode + '?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('licenses')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                showToast('Đã xóa key');
+                loadLicenses();
+            } catch (err) {
+                showToast('Lỗi xóa: ' + err.message, 'error');
+            }
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            showToast('Đã sao chép: ' + text);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initSupabase();
+            loadLicenses();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
