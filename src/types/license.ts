@@ -1,4 +1,4 @@
-export interface License {
+﻿export interface License {
   id: string;
   key_code: string;
   customer_name: string | null;
@@ -7,6 +7,8 @@ export interface License {
   total_runs: number;
   used_runs: number;
   duration_days: number;
+  max_activations: number;
+  machine_ids?: string[] | null;
   activated_at: string | null;
   expires_at: string | null;
   machine_id: string | null;

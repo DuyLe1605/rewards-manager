@@ -33,7 +33,7 @@ export const LicenseTable: React.FC<LicenseTableProps> = ({
               <th className="py-3.5 px-4">Khách hàng & Ghi chú</th>
               <th className="py-3.5 px-4">Giới hạn & Tiến độ Runs</th>
               <th className="py-3.5 px-4">Hạn sử dụng</th>
-              <th className="py-3.5 px-4">Máy tính (HWID)</th>
+              <th className="py-3.5 px-4">Thiết bị (Redeem)</th>
               <th className="py-3.5 px-4">Trạng thái</th>
               <th className="py-3.5 px-4 text-right">Thao tác</th>
             </tr>
@@ -104,14 +104,18 @@ export const LicenseTable: React.FC<LicenseTableProps> = ({
                           : 'Chưa nhập máy'}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 max-w-[140px] truncate" title={l.machine_id || 'Chưa gắn'}>
-                      {l.machine_id ? (
-                        <span className="font-mono text-purple-400 text-[11px] bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
-                          {l.machine_id.substring(0, 10)}...
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 mb-1 text-xs">
+                        <span className="text-slate-400 font-medium">Đã dùng:</span>
+                        <span className="font-semibold text-purple-400">
+                          {(Array.isArray(l.machine_ids) ? l.machine_ids.length : (l.machine_id ? 1 : 0))} / {l.max_activations || 1} máy
                         </span>
-                      ) : (
-                        <span className="text-slate-500 italic text-[11px]">Chưa gắn máy</span>
-                      )}
+                      </div>
+                      <div className="max-w-[130px] truncate text-[10px] font-mono text-slate-500" title={Array.isArray(l.machine_ids) && l.machine_ids.length > 0 ? l.machine_ids.join(', ') : (l.machine_id || 'Chưa kích hoạt')}>
+                        {Array.isArray(l.machine_ids) && l.machine_ids.length > 0 
+                          ? l.machine_ids[0].substring(0, 10) + (l.machine_ids.length > 1 ? ` (+${l.machine_ids.length - 1})` : '')
+                          : (l.machine_id ? l.machine_id.substring(0, 10) + '...' : 'Chưa gắn máy')}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       {l.status === 'blocked' ? (

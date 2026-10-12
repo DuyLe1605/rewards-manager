@@ -21,6 +21,7 @@ interface CreateModalProps {
     max_profiles: number;
     total_runs: number;
     duration_days: number;
+    max_activations: number;
   }) => void;
 }
 
@@ -31,6 +32,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
   const [maxProfiles, setMaxProfiles] = useState(5);
   const [totalRuns, setTotalRuns] = useState(150);
   const [durationDays, setDurationDays] = useState(30);
+  const [maxActivations, setMaxActivations] = useState(1);
 
   useEffect(() => {
     if (open) {
@@ -40,6 +42,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
       setMaxProfiles(5);
       setTotalRuns(150);
       setDurationDays(30);
+      setMaxActivations(1);
     }
   }, [open]);
 
@@ -64,6 +67,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
               max_profiles: maxProfiles,
               total_runs: totalRuns,
               duration_days: durationDays,
+              max_activations: maxActivations,
             });
           }}
           className="p-6 space-y-4"
@@ -98,6 +102,17 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
                 max={100}
                 value={maxProfiles}
                 onChange={(e) => setMaxProfiles(parseInt(e.target.value, 10) || 1)}
+                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Số thiết bị cho phép (Redeem Limit):</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={maxActivations}
+                onChange={(e) => setMaxActivations(parseInt(e.target.value, 10) || 1)}
                 className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
