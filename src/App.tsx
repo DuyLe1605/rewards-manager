@@ -3,7 +3,7 @@ import { Search, PlusCircle } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { StatsCards } from './components/StatsCards';
 import { LicenseTable } from './components/LicenseTable';
-import { CreateModal, ExtendModal, SettingsModal } from './components/Modals';
+import { CreateModal, EditModal, SettingsModal } from './components/Modals';
 import { getStoredConfig, saveStoredConfig, getSupabase } from './lib/supabase';
 import type { License, Stats } from './types/license';
 
@@ -17,7 +17,7 @@ export function App() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [selectedExtend, setSelectedExtend] = useState<License | null>(null);
+  const [selectedEdit, setSelectedEdit] = useState<License | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -163,32 +163,36 @@ export function App() {
     }
   };
 
-  const handleExtend = async (license: License, extraRuns: number, extraDays: number) => {
+  const handleUpdateLicense = async (
+    license: License,
+    updates: Partial<License> & { reset_devices?: boolean }
+  ) => {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    const newTotalRuns = (license.total_runs || 0) + extraRuns;
-    let newExpiresAt = license.expires_at ? new Date(license.expires_at) : new Date();
-    if (newExpiresAt < new Date()) newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + extraDays);
+    const { reset_devices, ...licenseUpdates } = updates;
+    const payload: any = {
+      ...licenseUpdates,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (reset_devices) {
+      payload.machine_id = null;
+      payload.machine_ids = [];
+    }
 
     try {
       const { error } = await supabase
         .from('licenses')
-        .update({
-          total_runs: newTotalRuns,
-          expires_at: extraDays > 0 ? newExpiresAt.toISOString() : license.expires_at,
-          status: 'active',
-          updated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq('id', license.id);
 
       if (error) throw error;
-      setSelectedExtend(null);
-      showToast('Đã cập nhật gia hạn thành công');
+      setSelectedEdit(null);
+      showToast('Đã lưu cập nhật bản quyền thành công');
       fetchLicenses();
     } catch (err: any) {
-      showToast('Lỗi: ' + err.message, 'error');
+      showToast('Lỗi cập nhật: ' + err.message, 'error');
     }
   };
 
@@ -269,14 +273,14 @@ export function App() {
           loading={loading}
           onCopy={handleCopy}
           onResetHwid={handleResetHwid}
-          onOpenExtend={setSelectedExtend}
+          onOpenEdit={setSelectedEdit}
           onToggleBlock={handleToggleBlock}
           onDelete={handleDelete}
         />
       </main>
 
       <CreateModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />
-      <ExtendModal license={selectedExtend} onClose={() => setSelectedExtend(null)} onSubmit={handleExtend} />
+      <EditModal license={selectedEdit} onClose={() => setSelectedEdit(null)} onSubmit={handleUpdateLicense} />
       <SettingsModal
         open={settingsOpen}
         initialUrl={config.url}

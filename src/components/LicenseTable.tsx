@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, RotateCcw, CalendarPlus, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Copy, RotateCcw, Pencil, Lock, Unlock, Trash2 } from 'lucide-react';
 import type { License } from '../types/license';
 
 interface LicenseTableProps {
@@ -7,7 +7,8 @@ interface LicenseTableProps {
   loading: boolean;
   onCopy: (text: string) => void;
   onResetHwid: (key: string) => void;
-  onOpenExtend: (license: License) => void;
+  onOpenEdit?: (license: License) => void;
+  onOpenExtend?: (license: License) => void;
   onToggleBlock: (license: License) => void;
   onDelete: (license: License) => void;
 }
@@ -17,6 +18,7 @@ export const LicenseTable: React.FC<LicenseTableProps> = ({
   loading,
   onCopy,
   onResetHwid,
+  onOpenEdit,
   onOpenExtend,
   onToggleBlock,
   onDelete,
@@ -146,11 +148,11 @@ export const LicenseTable: React.FC<LicenseTableProps> = ({
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => onOpenExtend(l)}
+                          onClick={() => (onOpenEdit ? onOpenEdit(l) : onOpenExtend?.(l))}
                           className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
-                          title="Cộng lượt / Gia hạn"
+                          title="Chỉnh sửa bản quyền (thiết bị, hạn dùng, tiến độ...)"
                         >
-                          <CalendarPlus className="w-3.5 h-3.5" />
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => onToggleBlock(l)}

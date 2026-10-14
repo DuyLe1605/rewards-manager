@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   RotateCw,
+  RotateCcw,
   Plus,
   Settings,
   Infinity,
@@ -15,7 +16,12 @@ import {
   X,
   Check,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  Pencil,
+  Calendar,
+  Copy,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import type { License } from '../types/license';
 
@@ -354,79 +360,492 @@ export const CreateModal: React.FC<CreateModalProps> = ({ open, onClose, onSubmi
   );
 };
 
-interface ExtendModalProps {
+export interface EditModalProps {
+  license: License | null;
+  onClose: () => void;
+  onSubmit: (license: License, updates: Partial<License> & { reset_devices?: boolean }) => void;
+}
+
+export const EditModal: React.FC<EditModalProps> = ({ license, onClose, onSubmit }) => {
+  const [customerName, setCustomerName] = useState('');
+  const [customerNote, setCustomerNote] = useState('');
+  const [maxProfiles, setMaxProfiles] = useState(5);
+  const [maxActivations, setMaxActivations] = useState(1);
+  const [totalRuns, setTotalRuns] = useState(150);
+  const [usedRuns, setUsedRuns] = useState(0);
+  const [status, setStatus] = useState<'active' | 'blocked'>('active');
+  const [durationDays, setDurationDays] = useState(30);
+  const [expiresAt, setExpiresAt] = useState('');
+  const [resetDevices, setResetDevices] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  useEffect(() => {
+    if (license) {
+      setCustomerName(license.customer_name || '');
+      setCustomerNote(license.customer_note || '');
+      setMaxProfiles(license.max_profiles ?? 5);
+      setMaxActivations(license.max_activations ?? 1);
+      setTotalRuns(license.total_runs ?? 150);
+      setUsedRuns(license.used_runs ?? 0);
+      setStatus(license.status || 'active');
+      setDurationDays(license.duration_days ?? 30);
+      setResetDevices(false);
+      setCopiedKey(false);
+
+      if (license.expires_at) {
+        const d = new Date(license.expires_at);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        setExpiresAt(`${y}-${m}-${day}`);
+      } else {
+        setExpiresAt('');
+      }
+    }
+  }, [license]);
+
+  if (!license) return null;
+
+  const handleCopyKey = () => {
+    navigator.clipboard.writeText(license.key_code);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const handleQuickExtend = (daysToAdd: number) => {
+    let baseDate: Date;
+    if (expiresAt) {
+      baseDate = new Date(expiresAt);
+      if (isNaN(baseDate.getTime()) || baseDate < new Date()) {
+        baseDate = new Date();
+      }
+    } else {
+      baseDate = new Date();
+    }
+    baseDate.setDate(baseDate.getDate() + daysToAdd);
+    const y = baseDate.getFullYear();
+    const m = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const day = String(baseDate.getDate()).padStart(2, '0');
+    setExpiresAt(`${y}-${m}-${day}`);
+  };
+
+  const isTotalUnlimited = totalRuns >= UNLIMITED;
+  const runsPercent = isTotalUnlimited
+    ? 0
+    : Math.min(100, Math.round((usedRuns / Math.max(1, totalRuns)) * 100));
+
+  const devicesCount =
+    (license.machine_ids && license.machine_ids.length > 0)
+      ? license.machine_ids.length
+      : license.machine_id
+      ? 1
+      : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800/90 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl shadow-emerald-950/30 my-8 animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900 to-slate-850">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Pencil className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white leading-tight">Chỉnh Sửa Bản Quyền</h3>
+                <button
+                  type="button"
+                  onClick={handleCopyKey}
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 hover:border-emerald-400/50 px-2 py-0.5 rounded transition-all cursor-pointer"
+                  title="Nhấn để copy mã key"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  {license.key_code}
+                  {copiedKey ? <Check className="w-3 h-3 text-emerald-300" /> : <Copy className="w-3 h-3 opacity-60" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">Tùy chỉnh thông số khách, giới hạn, tiến độ và hạn dùng</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const updates: Partial<License> & { reset_devices?: boolean } = {
+              customer_name: customerName.trim() || null,
+              customer_note: customerNote.trim() || null,
+              max_profiles: maxProfiles,
+              max_activations: maxActivations,
+              total_runs: totalRuns,
+              used_runs: usedRuns,
+              status,
+              duration_days: durationDays,
+            };
+
+            if (expiresAt) {
+              const d = new Date(`${expiresAt}T23:59:59.000Z`);
+              updates.expires_at = isNaN(d.getTime()) ? null : d.toISOString();
+            } else {
+              updates.expires_at = null;
+            }
+
+            if (resetDevices) {
+              updates.reset_devices = true;
+            }
+
+            onSubmit(license, updates);
+          }}
+          className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+        >
+          {/* Thông tin khách hàng & Ghi chú */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Tên Khách hàng / Nick <span className="text-emerald-400">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="VD: A. Tuấn Zalo"
+                  className="w-full pl-8.5 pr-3 py-2 text-xs rounded-xl bg-slate-950/80 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Ghi chú / Kênh bán / Giá tiền
+              </label>
+              <div className="relative">
+                <CreditCard className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  value={customerNote}
+                  onChange={(e) => setCustomerNote(e.target.value)}
+                  placeholder="VD: 200k - VietQR"
+                  className="w-full pl-8.5 pr-3 py-2 text-xs rounded-xl bg-slate-950/80 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Trạng thái key */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Trạng thái hoạt động
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setStatus('active')}
+                className={`px-3 py-2 text-xs font-semibold rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  status === 'active'
+                    ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400 shadow-sm shadow-emerald-500/10'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Đang Hoạt Động (Active)
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatus('blocked')}
+                className={`px-3 py-2 text-xs font-semibold rounded-xl border flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  status === 'blocked'
+                    ? 'bg-red-950/40 border-red-500 text-red-400 shadow-sm shadow-red-500/10'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Đã Khóa (Blocked)
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Giới hạn Quotas */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Cấu hình giới hạn sử dụng
+              </span>
+              <span className="text-[10px] text-slate-400">Có thể bật Vô hạn bất kỳ lúc nào</span>
+            </div>
+
+            <div className="space-y-2">
+              <LimitRow
+                icon={<Users className="w-4 h-4" />}
+                label="Số Profile tối đa"
+                sublabel="Số lượng profile tool được phép quản lý và chạy đồng thời"
+                value={maxProfiles}
+                unit="profile"
+                onChange={setMaxProfiles}
+                min={1}
+                defaultValue={5}
+              />
+
+              <LimitRow
+                icon={<Laptop className="w-4 h-4" />}
+                label="Số thiết bị kích hoạt (Redeem Limit)"
+                sublabel="Số máy tính tối đa được phép nhập và kích hoạt mã này"
+                value={maxActivations}
+                unit="máy"
+                onChange={setMaxActivations}
+                min={1}
+                defaultValue={1}
+              />
+
+              <LimitRow
+                icon={<Activity className="w-4 h-4" />}
+                label="Tổng số lượt chạy (Total Runs)"
+                sublabel="Tổng số lượt thực thi tool cấp cho bản quyền này"
+                value={totalRuns}
+                unit="runs"
+                onChange={setTotalRuns}
+                min={1}
+                defaultValue={150}
+              />
+            </div>
+          </div>
+
+          {/* Section: Tiến độ Runs đã dùng (Used Runs) */}
+          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-teal-400" /> Tiến độ lượt chạy đã dùng (Used Runs)
+                </label>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Số lượt khách đã thực thi tool. Bạn có thể sửa trực tiếp hoặc bấm reset.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setUsedRuns(0)}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                title="Đặt lại số lượt đã dùng về 0"
+              >
+                <RotateCcw className="w-3 h-3" /> Đặt về 0
+              </button>
+            </div>
+
+            {/* Thanh tiến độ trực quan */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[11px] font-mono">
+                <span className="text-slate-400">
+                  Đã dùng: <strong className="text-white">{usedRuns}</strong> / {isTotalUnlimited ? 'Vô hạn' : `${totalRuns} runs`}
+                </span>
+                <span className={usedRuns >= totalRuns && !isTotalUnlimited ? 'text-red-400 font-bold' : 'text-emerald-400'}>
+                  {isTotalUnlimited ? 'Vô hạn' : `${runsPercent}%`}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    usedRuns >= totalRuns && !isTotalUnlimited
+                      ? 'bg-red-500'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                  }`}
+                  style={{ width: `${isTotalUnlimited ? 100 : runsPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-slate-400">Chỉnh sửa số lượt đã dùng:</span>
+              <input
+                type="number"
+                min={0}
+                value={usedRuns}
+                onChange={(e) => setUsedRuns(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                className="w-24 px-3 py-1.5 text-xs text-center font-bold text-white bg-slate-900 border border-slate-800 rounded-lg focus:outline-none focus:border-emerald-500"
+              />
+              <span className="text-xs text-slate-500">lượt</span>
+            </div>
+          </div>
+
+          {/* Section: Hạn sử dụng */}
+          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" /> Hạn sử dụng bản quyền
+                </label>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {license.expires_at ? (
+                    <>Hạn hiện tại: <span className="text-slate-200 font-semibold">{new Date(license.expires_at).toLocaleDateString('vi-VN')}</span></>
+                  ) : (
+                    <span className="text-amber-400">Key chưa kích hoạt (bắt đầu tính khi khách nhập key)</span>
+                  )}
+                </p>
+              </div>
+
+              {expiresAt && (
+                <button
+                  type="button"
+                  onClick={() => setExpiresAt('')}
+                  className="text-[11px] text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                  title="Xóa hạn cụ thể (chuyển về chờ kích hoạt)"
+                >
+                  Xóa ngày cố định
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-slate-400 mb-1">Chọn ngày hết hạn cụ thể:</label>
+              <input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              />
+            </div>
+
+            {/* Nút cộng gia hạn nhanh */}
+            <div>
+              <span className="block text-[11px] text-slate-400 mb-1.5">Gia hạn nhanh từ ngày hiện tại:</span>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickExtend(7)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
+                >
+                  +7 Ngày
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickExtend(30)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
+                >
+                  +30 Ngày (1 Tháng)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickExtend(90)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
+                >
+                  +90 Ngày (3 Tháng)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickExtend(365)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer"
+                >
+                  +1 Năm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickExtend(3650)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/40 text-emerald-300 transition-colors cursor-pointer"
+                >
+                  Vĩnh viễn (10 Năm)
+                </button>
+              </div>
+            </div>
+
+            {/* Trường hợp key chưa kích hoạt, cho đổi gói duration_days */}
+            {!license.expires_at && !expiresAt && (
+              <div className="pt-2 border-t border-slate-850">
+                <label className="block text-[11px] text-slate-400 mb-1">
+                  Thời hạn gói sau khi khách kích hoạt:
+                </label>
+                <select
+                  value={durationDays}
+                  onChange={(e) => setDurationDays(parseInt(e.target.value, 10))}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value={7}>7 Ngày (Dùng thử / Gói tuần)</option>
+                  <option value={14}>14 Ngày (2 Tuần)</option>
+                  <option value={30}>30 Ngày (1 Tháng - Mặc định)</option>
+                  <option value={60}>60 Ngày (2 Tháng)</option>
+                  <option value={90}>90 Ngày (3 Tháng / Gói Quý)</option>
+                  <option value={180}>180 Ngày (6 Tháng / Nửa Năm)</option>
+                  <option value={365}>365 Ngày (1 Năm)</option>
+                  <option value={3650}>Vĩnh viễn (10 Năm)</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Section: Quản lý thiết bị đã gắn (Redeem HWID) */}
+          {devicesCount > 0 && (
+            <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5" /> Thiết bị đã kích hoạt ({devicesCount} máy)
+                </span>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-mono truncate max-w-sm">
+                  {license.machine_ids && license.machine_ids.length > 0
+                    ? license.machine_ids.join(', ')
+                    : license.machine_id}
+                </p>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={resetDevices}
+                  onChange={(e) => setResetDevices(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 bg-slate-900 border-slate-700"
+                />
+                <span className="text-xs font-medium text-slate-200">
+                  Reset máy (Xóa liên kết)
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-800 bg-slate-800/60 hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all cursor-pointer"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Lưu Thay Đổi
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export interface ExtendModalProps {
   license: License | null;
   onClose: () => void;
   onSubmit: (license: License, extraRuns: number, extraDays: number) => void;
 }
 
 export const ExtendModal: React.FC<ExtendModalProps> = ({ license, onClose, onSubmit }) => {
-  const [extraRuns, setExtraRuns] = useState(50);
-  const [extraDays, setExtraDays] = useState(30);
-
-  if (!license) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl shadow-emerald-950/30 animate-in fade-in zoom-in-95 duration-150">
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Plus className="w-4 h-4" />
-            </div>
-            Gia Hạn &amp; Thêm Lượt Chạy
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit(license, extraRuns, extraDays);
-          }}
-          className="p-6 space-y-4"
-        >
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm lượt Runs:</label>
-            <input
-              type="number"
-              min={0}
-              value={extraRuns}
-              onChange={(e) => setExtraRuns(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">* Nhập 0 nếu không muốn cộng thêm runs.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Cộng thêm số ngày hết hạn:</label>
-            <input
-              type="number"
-              min={0}
-              value={extraDays}
-              onChange={(e) => setExtraDays(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-emerald-500"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">* Số ngày sẽ được cộng dồn vào hạn dùng hiện tại.</p>
-          </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs rounded-xl border border-slate-800 bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-xs rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold cursor-pointer"
-            >
-              Lưu Cập Nhật
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <EditModal
+      license={license}
+      onClose={onClose}
+      onSubmit={(lic, updates) => {
+        const extraRuns = Math.max(0, (updates.total_runs ?? lic.total_runs) - lic.total_runs);
+        onSubmit(lic, extraRuns, updates.duration_days ?? 0);
+      }}
+    />
   );
 };
 
